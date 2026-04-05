@@ -10,6 +10,14 @@ chrome.runtime.onInstalled.addListener(async () => {
   }
 });
 
+chrome.action.onClicked.addListener(async (tab) => {
+  try {
+    await openDefaultSplitView(tab);
+  } catch (error) {
+    console.error("Failed to open Awesome Split", error);
+  }
+});
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   handleMessage(message, sender)
     .then((result) => sendResponse({ ok: true, result }))
@@ -32,6 +40,7 @@ async function handleMessage(message, sender) {
         customUrl: message.customUrl,
         primaryUrl: message.primaryUrl,
         secondaryUrl: message.secondaryUrl,
+        paneCount: message.paneCount,
       });
     default:
       throw new Error("Unsupported message type");
@@ -56,10 +65,13 @@ async function splitCurrentTab({
   customUrl,
   primaryUrl,
   secondaryUrl,
+  paneCount,
 }) {
   if (!["horizontal", "vertical"].includes(layout)) {
     throw new Error("Invalid split layout");
   }
+
+  const nextPaneCount = paneCount === 3 ? 3 : 2;
 
   const currentTab = senderTabId
     ? await chrome.tabs.get(senderTabId)
@@ -71,10 +83,15 @@ async function splitCurrentTab({
 
   const sourceUrl = resolvePrimaryUrl(primaryUrl, currentTab.url);
   const targetUrl = secondaryUrl || (await resolveTargetUrl(target, sourceUrl, customUrl));
-  const splitViewUrl = buildSplitViewUrl({
-    layout,
+  const panes = buildInitialPanes({
+    paneCount: nextPaneCount,
     primaryUrl: sourceUrl,
     secondaryUrl: targetUrl,
+  });
+  const splitViewUrl = buildSplitViewUrl({
+    layout,
+    panes,
+    weights: buildEqualWeights(nextPaneCount),
   });
 
   await chrome.tabs.update(currentTab.id, {
@@ -86,9 +103,41 @@ async function splitCurrentTab({
     currentTabId: currentTab.id,
     layout,
     splitViewUrl,
-    primaryUrl: sourceUrl,
-    secondaryUrl: targetUrl,
+    paneCount: nextPaneCount,
+    panes,
   };
+}
+
+async function openDefaultSplitView(clickedTab) {
+  const windowId = clickedTab?.windowId ?? (await getActiveTab()).windowId;
+  if (windowId === undefined) {
+    throw new Error("Current window is unavailable");
+  }
+
+  const window = await chrome.windows.get(windowId);
+  const tabs = await chrome.tabs.query({ windowId });
+  const eligibleTabs = tabs
+    .filter((tab) => isEmbeddableTabUrl(tab.url))
+    .sort((left, right) => (left.index ?? 0) - (right.index ?? 0));
+
+  if (eligibleTabs.length < 2) {
+    throw new Error("Need at least two regular web tabs in this window");
+  }
+
+  const panes = eligibleTabs.slice(0, 2).map((tab) => tab.url);
+  const layout = chooseLayout(window.width, window.height);
+  const splitViewUrl = buildSplitViewUrl({
+    layout,
+    panes,
+    weights: buildEqualWeights(panes.length),
+  });
+
+  await chrome.tabs.create({
+    windowId,
+    url: splitViewUrl,
+    active: true,
+    index: Math.min((clickedTab?.index ?? eligibleTabs[1].index ?? 1) + 1, tabs.length),
+  });
 }
 
 async function getActiveTab() {
@@ -146,11 +195,32 @@ function resolvePrimaryUrl(primaryUrl, fallbackUrl) {
   return normalized;
 }
 
-function buildSplitViewUrl({ layout, primaryUrl, secondaryUrl }) {
+function isEmbeddableTabUrl(url) {
+  const normalized = normalizeUrl(url);
+  return Boolean(normalized) && !normalized.startsWith(chrome.runtime.getURL(""));
+}
+
+function chooseLayout(width = 0, height = 0) {
+  return width >= height ? "vertical" : "horizontal";
+}
+
+function buildInitialPanes({ paneCount, primaryUrl, secondaryUrl }) {
+  if (paneCount === 3) {
+    return [primaryUrl, secondaryUrl, secondaryUrl];
+  }
+
+  return [primaryUrl, secondaryUrl];
+}
+
+function buildEqualWeights(paneCount) {
+  return Array.from({ length: paneCount }, () => 1 / paneCount);
+}
+
+function buildSplitViewUrl({ layout, panes, weights }) {
   const query = new URLSearchParams({
     layout,
-    primary: primaryUrl,
-    secondary: secondaryUrl,
+    pages: JSON.stringify(panes),
+    weights: JSON.stringify(weights),
   });
 
   return `${chrome.runtime.getURL("split-view.html")}?${query.toString()}`;
