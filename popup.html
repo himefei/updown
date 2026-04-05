@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>UpDown Split</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main class="panel">
+      <h1>UpDown Split</h1>
+      <p>Open two pages inside the current tab with left-right or top-bottom split.</p>
+
+      <label class="field">
+        <span>Custom URL</span>
+        <input id="custom-url" type="url" placeholder="https://example.com">
+      </label>
+
+      <div class="actions">
+        <button type="button" data-layout="vertical" data-target="duplicate">Open left / right split</button>
+        <button type="button" data-layout="horizontal" data-target="duplicate">Open top / bottom split</button>
+        <button type="button" data-layout="vertical" data-target="custom">Open left / right with custom URL</button>
+        <button type="button" data-layout="horizontal" data-target="custom">Open top / bottom with custom URL</button>
+      </div>
+
+      <p id="status" role="status"></p>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

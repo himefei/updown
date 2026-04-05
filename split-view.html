@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>UpDown Split View</title>
+    <link rel="stylesheet" href="split-view.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <h1>UpDown Split</h1>
+          <p>Two pages in one tab. Use the three-dot menu in either pane to switch layouts.</p>
+        </div>
+        <button id="swap-button" type="button">Swap Panes</button>
+      </header>
+
+      <section id="split-root" class="split-root">
+        <article class="pane" data-pane="primary">
+          <iframe class="pane-frame" title="Primary pane" referrerpolicy="no-referrer"></iframe>
+          <div class="pane-toolbar">
+            <button class="pane-toggle" type="button" aria-label="Open pane menu">...</button>
+            <div class="pane-menu" hidden>
+              <button type="button" data-action="layout" data-layout="horizontal">Top / Bottom split</button>
+              <button type="button" data-action="layout" data-layout="vertical">Left / Right split</button>
+              <button type="button" data-action="edit-url">Change this pane URL</button>
+              <button type="button" data-action="reload">Reload this pane</button>
+            </div>
+          </div>
+        </article>
+
+        <article class="pane" data-pane="secondary">
+          <iframe class="pane-frame" title="Secondary pane" referrerpolicy="no-referrer"></iframe>
+          <div class="pane-toolbar">
+            <button class="pane-toggle" type="button" aria-label="Open pane menu">...</button>
+            <div class="pane-menu" hidden>
+              <button type="button" data-action="layout" data-layout="horizontal">Top / Bottom split</button>
+              <button type="button" data-action="layout" data-layout="vertical">Left / Right split</button>
+              <button type="button" data-action="edit-url">Change this pane URL</button>
+              <button type="button" data-action="reload">Reload this pane</button>
+            </div>
+          </div>
+          <div class="pane-badge">Secondary</div>
+        </article>
+      </section>
+
+      <div id="notice" class="notice" hidden></div>
+    </main>
+    <script type="module" src="split-view.js"></script>
+  </body>
+</html>
